@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>东城卡网 - 自动发卡平台</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ================= 全局样式重置 ================= */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #0a0a0a; color: #fff; }
+
+        /* ================= 主容器 ================= */
+        .container {
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ================= 背景轮播 ================= */
+        .background-slider {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+        }
+        .slide {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transform: scale(1.1);
+            transition: opacity 1.2s ease-in-out, transform 1.5s ease-in-out;
+            z-index: 0;
+        }
+        .slide.active {
+            opacity: 1;
+            transform: scale(1);
+            z-index: 1;
+        }
+
+        /* ================= 背景遮罩 (增强文字可读性) ================= */
+        .background-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%);
+            z-index: 2;
+            pointer-events: none; /* 让点击穿透遮罩 */
+        }
+
+        /* ================= 内容区域 ================= */
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* 全息标题特效 */
+        .holographic-content {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: holographicPulse 3s ease-in-out infinite;
+        }
+        @keyframes holographicPulse {
+            0%, 100% { transform: scale(1); filter: hue-rotate(0deg); }
+            50% { transform: scale(1.02); filter: hue-rotate(15deg); }
+        }
+        .holographic-title {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: bold;
+            background: linear-gradient(45deg, #00f5ff, #ff00ff, #00ff00, #00f5ff);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: holographicGradient 8s ease infinite;
+            text-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+            margin-bottom: 20px;
+        }
+        @keyframes holographicGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .holographic-subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        /* 按钮组 */
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .glow-button {
+            position: relative;
+            padding: 15px 40px;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            font-weight: 600;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #00f5ff;
+            border-radius: 8px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            min-width: 150px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+        }
+        .glow-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.6);
+            border-color: #ff00ff;
+            background: rgba(0, 245, 255, 0.2);
+        }
+        
+        /* ================= 页脚 ================= */
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0; right: 0;
+            text-align: center;
+            z-index: 10;
+            padding: 0 20px;
+        }
+        /* 原来的 .social-link 样式可以保留也可以删除，这里保留以防万一 */
+        .social-link {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.5rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .social-link:hover { color: #00f5ff; transform: translateY(-3px); }
+        .copyright { color: rgba(255, 255, 255, 0.5); font-size: 0.85rem; }
+
+        /* ================= 加载屏幕 ================= */
+        .loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0a0a;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .loader {
+            width: 80px; height: 80px;
+            border: 3px solid transparent;
+            border-top-color: #00f5ff; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .loader::before {
+            content: ""; position: absolute; top: 5px; left: 5px; right: 5px; bottom: 5px;
+            border: 3px solid transparent; border-top-color: #ff00ff; border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { margin-top: 20px; color: #00f5ff; letter-spacing: 2px; }
+        
+        /* ================= 点击波纹特效 ================= */
+        .rainbow-halo {
+            position: fixed; width: 50px; height: 50px; border-radius: 50%;
+            pointer-events: none; z-index: 9999;
+            background: radial-gradient(circle, rgba(255,0,0,0.5), rgba(0,255,0,0.5), transparent);
+            box-shadow: 0 0 20px rgba(255,255,255,0.5);
+            animation: haloExpand 0.8s ease-out forwards;
+        }
+        @keyframes haloExpand {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loader"></div>
+        <div class="loading-text">LOADING...</div>
+    </div>
+
+    <div class="container">
+        <div class="background-slider" id="backgroundSlider">
+            <div class="slide active" style="background-image: url('static/image/bj1.jpg');"></div>
+            <div class="slide" style="background-image: url('static/image/bj2.jpg');"></div>
+            <div class="slide" style="background-image: url('static/image/bj3.jpg');"></div>
+            <div class="slide" style="background-image: url('static/image/bj4.jpg');"></div>
+            <div class="slide" style="background-image: url('static/image/bj5.jpg');"></div>
+            <div class="slide" style="background-image: url('static/image/bj6.jpg');"></div>
+        </div>
+        
+        <div class="background-overlay"></div>
+
+        <div class="content-wrapper">
+            <div class="holographic-content">
+                <h1 class="holographic-title">东城卡网</h1>
+                <p class="holographic-subtitle">自动发卡平台 - 技术支持服务</p>
+            </div>
+
+            <div class="button-group">
+                <a href="https://dongchengka.club/" target="_blank" class="glow-button">主站</a>
+                <a href="https://yun.95yjs.com/links/0BE38A26" target="_blank" class="glow-button">国内优化分站</a>
+                <a href="https://www.91ajs.com/" target="_blank" class="glow-button">国内VPN</a>
+                <a href="https://amon.club/register?code=pKz8aoHv" target="_blank" class="glow-button">全球VPN</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="copyright">© 2026  东城卡网 dongchengka.club - 版权所有</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // --- 加载屏幕逻辑 ---
+            const loadingScreen = document.getElementById('loadingScreen');
+            // 模拟加载，1秒后消失
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+            }, 1000);
+
+            // --- 背景轮播逻辑 ---
+            const slides = document.querySelectorAll('.slide');
+            let currentSlide = 0;
+
+            function nextSlide() {
+                // 移除当前激活状态
+                slides[currentSlide].classList.remove('active');
+                
+                // 计算下一张索引 (0 -> 1 -> ... -> 5 -> 0)
+                currentSlide = (currentSlide + 1) % slides.length;
+                
+                // 激活下一张
+                slides[currentSlide].classList.add('active');
+            }
+
+            // 设置定时器：每 5000 毫秒 (5秒) 切换一次
+            setInterval(nextSlide, 5000);
+
+            // --- 点击特效逻辑 ---
+            document.addEventListener('click', function(e) {
+                const halo = document.createElement('div');
+                halo.className = 'rainbow-halo';
+                // 设置位置为鼠标点击中心
+                halo.style.left = e.clientX + 'px';
+                halo.style.top = e.clientY + 'px';
+                document.body.appendChild(halo);
+
+                // 动画结束后移除元素
+                setTimeout(() => {
+                    halo.remove();
+                }, 800);
+            });
+        });
+    </script>
+</body>
+</html>
